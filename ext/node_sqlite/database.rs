@@ -1550,6 +1550,35 @@ impl DatabaseSync {
     }
   }
 
+  // Enables or disables the `loadExtension` SQL function and the
+  // `loadExtension()` method.
+  //
+  // When `allowExtension` is `false` when constructing, you cannot enable
+  // loading extensions for security reasons.
+  #[fast]
+  #[validate(is_open)]
+  fn enable_load_extension(
+    &self,
+    allow: bool,
+  ) -> Result<(), SqliteError> {
+    let db = self.conn.borrow();
+    let conn = db.as_ref().ok_or(SqliteError::AlreadyClosed)?;
+
+    if allow && !self.options.allow_extension {
+      return Err(SqliteError::LoadExensionFailed(
+        "Cannot enable load extension when allowExtension is not enabled"
+          .to_string(),
+      ));
+    }
+
+    assert!(set_db_config(
+      conn,
+      SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION,
+      allow,
+    ));
+    Ok(())
+  }
+
   // Creates and attaches a session to the database.
   //
   // This method is a wrapper around `sqlite3session_create()` and
